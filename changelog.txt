@@ -1,0 +1,30 @@
+2/19
+    - 2 mafia mode fully works
+    - logging added
+2/14
+    - game works
+2/13
+    - roles added and permissions work (maybe)
+2/7
+    - night works
+1/30
+    - no more role stacking
+    - guild files fully reformatted
+    - added changelog
+1/29
+    - guild files reformatted
+    - lots of type checking removed (no more lists)
+    - index.json removed
+    - fixGuildFile added
+    - night almost fully functional
+1/28
+    - roles added to guild files
+1/25
+    - role assignment DMs added
+    - mafiagame added, along with stageGen and day/night cycles
+1/24 - role assignment works
+1/23
+    - added settings, utils, death/vote messages
+    - viewsetup/setup commands functional
+1/22 - added guild.json files with 3 game roles
+1/21 - started

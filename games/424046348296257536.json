@@ -1,0 +1,43 @@
+{
+    "guildName": "The Dominion of M\u00e6nkind",
+    "guildID": 424046348296257536,
+    "metadata": {
+        "villageChannel": null,
+        "graveyardChannel": null,
+        "mafiaChannel": null,
+        "aliveRole": null,
+        "deadRole": null
+    },
+    "players": [],
+    "rules": {
+        "mafia": 1,
+        "doctor": 1,
+        "detective": 1
+    },
+    "roles": {
+        "mafia": [
+            [
+                null,
+                true
+            ]
+        ],
+        "doctor": [
+            [
+                null,
+                true
+            ]
+        ],
+        "detective": [
+            [
+                null,
+                true
+            ]
+        ],
+        "villager": [
+            [
+                null,
+                true
+            ]
+        ]
+    }
+}
