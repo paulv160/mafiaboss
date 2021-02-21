@@ -6,7 +6,7 @@ import datetime
 from pprint import pprint
 from discord.ext import commands
 from game import Game
-from settings import defaultMetadata, defaultRules, defaultRoles
+from settings import defaultMetadata, defaultRules, defaultRoles, helpInfo
 import settings
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -23,17 +23,18 @@ with open('settings.json') as s:
 
 class HelpCommand(commands.MinimalHelpCommand):
     def get_command_signature(self, command):
-        return f'{self.clean_prefix}{command.qualified_name} {command.signature}{(" - " + str(command.help)).replace(" - None", "")}'
+        if command.qualified_name in helpInfo.values():
+            cmdSig = helpInfo[command.qualified_name]
+        else:
+            cmdSig = command.signature
+        return f'{self.clean_prefix}{command.qualified_name} {cmdSig}{(" - " + str(command.help)).replace(" - None", "")}'
 
     async def send_bot_help(self, mapping):
         helpEmbed = discord.Embed(title="Mafia Boss Commands")
         for cog, commands in mapping.items():
             filtered = await self.filter_commands(commands, sort=True)
             command_signatures = [
-                self.get_command_signature(c) for c in filtered if c.name not in ('help', 'report')]
-            if getattr(cog, "qualified_name", "No Category") == 'Main':
-                command_signatures.append(
-                    '-report <info> - Report a bug or problem')
+                self.get_command_signature(c) for c in filtered]
             # pprint(command_signatures)
             if command_signatures:
                 cog_name = getattr(cog, "qualified_name", "No Category")

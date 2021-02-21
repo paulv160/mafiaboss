@@ -41,3 +41,7 @@ roleEmbedTitles = {
     'doctor': 'Who do you want to heal?',
     'detective': 'Who do you want to investigate?'
 }
+
+helpInfo = {
+    'report': 'Report a bug or problem'
+}
