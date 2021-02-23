@@ -12,6 +12,7 @@ from mafiagame import MafiaGame
 class Game(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.mafiaGame = None
 
     def dictSet(self, d):
         temp = dict()
@@ -223,19 +224,52 @@ class Game(commands.Cog):
         'name': 'clear',
     })
     async def clear(self, ctx):
+        if self.mafiaGame is not None:
+            del self.mafiaGame
+            self.mafiaGame = None
+            await ctx.send('Game over!')
         with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
             guildDict = json.loads(guildFile.read())
         with open(f'data/emoji_map.json', 'r') as emojiMap:
             emojiDict = json.loads(emojiMap.read())
-        if Permissions(administrator=True) not in ctx.author.guild_permissions and ctx.author.id != guildDict['players'][0]:
-            print(type(emojiDict))
+        if len(guildDict['players']) == 0:
             await ctx.message.add_reaction(emojiDict['no_entry_sign'])
-            await ctx.reply('You need to be the owner of the game or be a server admin to use this command!')
+            await ctx.reply('The lobby is empty!')
+        elif Permissions(administrator=True) not in ctx.author.guild_permissions and ctx.author.id != guildDict['players'][0]:
+            #print(type(emojiDict))
+            await ctx.message.add_reaction(emojiDict['no_entry_sign'])
+            await ctx.reply('You need to be the owner of the game or a server admin to use this command!')
         else:
             guildDict['players'] = []
             with open(f'games/{ctx.guild.id}.json', 'w') as guildFile:
                 guildFile.write(json.dumps(guildDict))
             await ctx.message.add_reaction(emojiDict['white_check_mark'])
+
+    @commands.command(command_attrs={
+        'name': 'kill',
+    })
+    async def kill(self, ctx):
+        with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
+            guildDict = json.loads(guildFile.read())
+        with open(f'data/emoji_map.json', 'r') as emojiMap:
+            emojiDict = json.loads(emojiMap.read())
+        if len(guildDict['players']) == 0:
+            await ctx.message.add_reaction(emojiDict['no_entry_sign'])
+            await ctx.reply('The lobby is empty!')
+            return
+        if Permissions(administrator=True) not in ctx.author.guild_permissions and ctx.author.id != guildDict['players'][0]:
+            await ctx.message.add_reaction(emojiDict['no_entry_sign'])
+            await ctx.reply('You need to be the owner of the game or a server admin to use this command!')
+            return
+        #print(self.mafiaGame)
+        if self.mafiaGame is not None:
+            del self.mafiaGame
+            self.mafiaGame = None
+            await ctx.message.add_reaction(emojiDict['white_check_mark'])
+            await ctx.send('Game over!')
+        else:
+            await ctx.message.add_reaction(emojiDict['no_entry_sign'])
+            await ctx.send('No game is currently active. Did you want to **clear** the lobby?')
 
     @commands.command(command_attrs={
         'name': 'game',
@@ -280,9 +314,9 @@ class Game(commands.Cog):
             await ctx.reply(f'You must have at least {settings.minPlayers} players before starting a game! You currently have {len(guildDict["players"])}.')
         else:
             await ctx.send('Starting game!')
-            game = MafiaGame(self.bot, ctx)
+            self.mafiaGame = MafiaGame(self.bot, ctx)
             try:
-                await game.run()
-            except:
+                await self.mafiaGame.run()
+            except Exception as e:
                 await ctx.reply(
-                    'An error occurred. Please try again or use the `report` command to report the problem.')
+                    f'Game over! An error occurred. Please use the `report` command to report the problem:\n`{str(e)}`')

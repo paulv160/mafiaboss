@@ -31,7 +31,8 @@ class MafiaGame:
         self.gameInitialized = False
         self.deathMsgs = ('**PLAYER_NAME** was bludgeoned to death with a hammer.', '**PLAYER_NAME** was thrown into a shark tank.',
                           '**PLAYER_NAME**\'s head was found rolling around in the **GUILD_NAME** town square.', '**PLAYER_NAME** was strangled with an extension cord.')
-        self.voteMsgs = ('**PLAYER_NAME** was sentenced to death by their fellow villagers.', '**PLAYER_NAME** was put under the guillotine.')
+        self.voteMsgs = ('**PLAYER_NAME** was sentenced to death by their fellow villagers.',
+                         '**PLAYER_NAME** was put under the guillotine.')
         self.dayNightStages = ({
             'name': 'Day ',
             'msgToShow': '**Daytime**',
@@ -53,6 +54,18 @@ class MafiaGame:
             'msgWhenDone': 'Roles assigned!',
             'action': 'choose_roles'
         }
+
+    def messageRelatesToCurrGame(self, m):
+        if m.guild != self.ctx.guild:
+            return False
+        elif m.guild == None:  # if in a dm
+            # if user is not in ctx.guild
+            if self.ctx.guild.get_member(m.author.id) is not None:
+                return False
+            else:  # if msg in dm, user in this guild
+                return True
+        else:  # if in this guild
+            return True
 
     async def fixPermissions(self, enableAll=False):
         with open(f'games/{self.ctx.guild.id}.json', 'r') as guildFile:
@@ -154,7 +167,7 @@ class MafiaGame:
         # delete later
         for k, v in guildDict['roles'].items():
             for lst in v:
-                await self.ctx.send(f'<@{lst[0]}> is {k}')
+                # await self.ctx.send(f'<@{lst[0]}> is {k}')
                 pass
         await self.fixPermissions(enableAll=True)
 
@@ -401,7 +414,7 @@ class MafiaGame:
             else:
                 if message.author.id in submitted:
                     # FIX THIS LATER LOL
-                    return False, False, 'You can only vote once! (The ability to change your vote hasn\'t been added yet)'
+                    return False, False, 'You can only vote once! (The ability to change your vote hasn\'t been added yet)', None
                 if args[0].lower() == 'vote' and repUserID(re.sub('[!@<>]', '', args[1]), self.bot):
                     try:
                         _ = voteDict[int(re.sub('[!@<>]', '', args[1]))]
@@ -432,7 +445,7 @@ class MafiaGame:
             await msg.reply(reply)
             if frozenset(livingPlayers) == frozenset(submitted):  # hope this doesnt break
                 await self.ctx.send('All votes are in!')
-                await self.ctx.send(str(voteDict))
+                # await self.ctx.send(str(voteDict))
                 break
 
         voteStr = ''
@@ -440,7 +453,8 @@ class MafiaGame:
             user = self.bot.get_user(int(voteRes))
             _ = await self.killPlayer(int(voteRes), 'vote')
             await self.fixPermissions()
-            voteStr = random.choice(self.voteMsgs).replace('PLAYER_NAME', f'<@{user.id}>')
+            voteStr = random.choice(self.voteMsgs).replace(
+                'PLAYER_NAME', f'<@{user.id}>')
         else:
             voteStr = 'No one was voted out.'
         voteResultEmbed = discord.Embed(

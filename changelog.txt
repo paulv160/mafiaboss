@@ -1,4 +1,9 @@
-2/19
+2/21
+    - kill command added
+    - clear now works while a game is active and kills the game
+2/20
+    - first games played, found new bugs
+2/19 - v1.0
     - 2 mafia mode fully works
     - logging added
 2/14
@@ -10,12 +15,11 @@
 1/30
     - no more role stacking
     - guild files fully reformatted
-    - added changelog
 1/29
     - guild files reformatted
     - lots of type checking removed (no more lists)
-    - index.json removed
-    - fixGuildFile added
+    - index.json removed, guildName added to guild.json
+    - fixGuildFile added, runs on startup
     - night almost fully functional
 1/28
     - roles added to guild files

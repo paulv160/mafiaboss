@@ -116,7 +116,7 @@ class Main(commands.Cog):
     async def info(self, ctx):
         infoEmbed = discord.Embed(
             title='Info',
-            description=f"""This bot was made by {settings['adminPing']}. If you encounter any bugs or issues, use the **-report** command or message me.
+            description=f"""This bot was made by {settings['adminPing']}. If you encounter any bugs or issues, use the **report** command or message me.
             For a full list of commands, use the **-help** command.
             Recommended server template for Mafia games (this bot will automatically set up the game if used in here): https://discord.new/WRPsR7HWrwBd."""
         )

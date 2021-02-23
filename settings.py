@@ -4,14 +4,14 @@ smallRulesetLimit = 7
 
 #villager should be 0 by default
 defaultRules = {  # groups of 5-7
-    'mafia': 2,
+    'mafia': 1,
     'doctor': 1,
     'detective': 1,
     'villager': 0
 }
 
 largeRules = {  # groups of 8 and up
-    'mafia': 2,
+    'mafia': 1,
     'doctor': 1,
     'detective': 1,
     'villager': 0
