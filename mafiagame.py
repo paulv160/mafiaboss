@@ -56,14 +56,14 @@ class MafiaGame:
         }
 
     def messageRelatesToCurrGame(self, m):
-        if m.guild != self.ctx.guild:
-            return False
-        elif m.guild == None:  # if in a dm
+        if m.guild == None:  # if in a dm
             # if user is not in ctx.guild
-            if self.ctx.guild.get_member(m.author.id) is not None:
+            if self.ctx.guild.get_member(m.author.id) is None:
                 return False
             else:  # if msg in dm, user in this guild
                 return True
+        elif m.guild != self.ctx.guild:
+            return False
         else:  # if in this guild
             return True
 
@@ -193,6 +193,8 @@ class MafiaGame:
         await self.bot.get_user(ID).send(embed=embed)
 
         def check(m, ID, bot, ICL):
+            if not self.messageRelatesToCurrGame(m):
+                return False
             r = random.randint(0, 50)
             args = m.content.split(' ')
             if m.author.id != ID:
@@ -239,6 +241,8 @@ class MafiaGame:
         await self.bot.get_channel(guildDict['metadata']['mafiaChannel']).send(embed=embed)
 
         def check(m, IDList, bot, ICL):
+            if not self.messageRelatesToCurrGame(m):
+                return False
             r = random.randint(0, 50)
             args = m.content.split(' ')
             if m.author.id not in IDList:
@@ -280,6 +284,8 @@ class MafiaGame:
         await self.bot.get_user(ID).send(embed=embed)
 
         def check(m, ID, bot, ICL):
+            if not self.messageRelatesToCurrGame(m):
+                return False
             r = random.randint(0, 50)
             args = m.content.split(' ')
             if m.author.id != ID:
@@ -325,6 +331,8 @@ class MafiaGame:
         await self.bot.get_user(ID).send(embed=embed)
 
         def check(m, ID, bot, ICL):
+            if not self.messageRelatesToCurrGame(m):
+                return False
             r = random.randint(0, 50)
             args = m.content.split(' ')
             if m.author.id != ID:
@@ -404,6 +412,8 @@ class MafiaGame:
             return maxKeys[0] if len(maxKeys) == 1 else None
 
         def check(message, validIDList):
+            if not self.messageRelatesToCurrGame(message):
+                return False, False, None, None
             nonlocal submitted, voteDict
             if message.content.lower() == 'skip':
                 return False, True, 'Skipped!', None
@@ -432,21 +442,22 @@ class MafiaGame:
             msg = await self.bot.wait_for('message', check=lambda m: True)
             voteRecognized, skipRecognized, reply, retID = check(
                 msg, livingPlayers)
-            if voteRecognized:
-                submitted.append(msg.author.id)
-                addVote(retID)
-                print(
-                    f'vote from {msg.author.name} for {self.bot.get_user(retID).name} recognized')
-            elif skipRecognized:
-                submitted.append(msg.author.id)
-                print(f'skip from {msg.author.name} recognized')
-            else:
-                print(f'vote from {msg.author.name} not recognized')
-            await msg.reply(reply)
-            if frozenset(livingPlayers) == frozenset(submitted):  # hope this doesnt break
-                await self.ctx.send('All votes are in!')
-                # await self.ctx.send(str(voteDict))
-                break
+            if reply is not None:  # if messageRelatesToCurrGame
+                if voteRecognized:
+                    submitted.append(msg.author.id)
+                    addVote(retID)
+                    print(
+                        f'vote from {msg.author.name} for {self.bot.get_user(retID).name} recognized')
+                elif skipRecognized:
+                    submitted.append(msg.author.id)
+                    print(f'skip from {msg.author.name} recognized')
+                else:
+                    print(f'vote from {msg.author.name} not recognized')
+                await msg.reply(reply)
+                if frozenset(livingPlayers) == frozenset(submitted):  # hope this doesnt break
+                    await self.ctx.send('All votes are in!')
+                    # await self.ctx.send(str(voteDict))
+                    break
 
         voteStr = ''
         if (voteRes := voteEvaluator(voteDict)) is not None:
