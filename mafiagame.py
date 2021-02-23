@@ -56,6 +56,8 @@ class MafiaGame:
         }
 
     def messageRelatesToCurrGame(self, m):
+        if m.author.bot:
+            return False
         if m.guild == None:  # if in a dm
             # if user is not in ctx.guild
             if self.ctx.guild.get_member(m.author.id) is None:
