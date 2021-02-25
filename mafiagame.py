@@ -29,10 +29,8 @@ class MafiaGame:
         self.bot = bot
         self.ctx = invokeContext
         self.gameInitialized = False
-        self.deathMsgs = ('**PLAYER_NAME** was bludgeoned to death with a hammer.', '**PLAYER_NAME** was thrown into a shark tank.',
-                          '**PLAYER_NAME**\'s head was found rolling around in the **GUILD_NAME** town square.', '**PLAYER_NAME** was strangled with an extension cord.')
-        self.voteMsgs = ('**PLAYER_NAME** was sentenced to death by their fellow villagers.',
-                         '**PLAYER_NAME** was put under the guillotine.')
+        self.deathMsgs = settings.deathMsgs
+        self.voteMsgs = settings.voteMsgs
         self.dayNightStages = ({
             'name': 'Day ',
             'msgToShow': '**Daytime**',
@@ -55,6 +53,16 @@ class MafiaGame:
             'action': 'choose_roles'
         }
 
+    async def removeRolesFromNonPlayers(self):
+        with open(f'games/{self.ctx.guild.id}.json', 'r') as guildFile:
+            guildDict = json.loads(guildFile.read())
+        aliveRole = get(self.ctx.guild.roles,
+                        id=guildDict['metadata']['aliveRole'])
+        deadRole = get(self.ctx.guild.roles,
+                       id=guildDict['metadata']['deadRole'])
+        for member in filter(lambda m: (aliveRole in m.roles or deadRole in m.roles) and (m.id not in guildDict['players']), self.ctx.guild.members):
+            await member.remove_roles(aliveRole, deadRole)
+
     def messageRelatesToCurrGame(self, m):
         if m.author.bot:
             return False
@@ -72,6 +80,7 @@ class MafiaGame:
     async def fixPermissions(self, enableAll=False):
         with open(f'games/{self.ctx.guild.id}.json', 'r') as guildFile:
             guildDict = json.loads(guildFile.read())
+        # --------FIX LATER, ADJUST FOR PLAYER COUNT--------                     #
         guildDict['gameData'] = settings.defaultGameData
         with open(f'games/{self.ctx.guild.id}.json', 'w') as guildFile:
             guildFile.write(json.dumps(guildDict))
@@ -93,44 +102,34 @@ class MafiaGame:
                     await member.remove_roles(deadRole)
                     if k == 'mafia':
                         perms = mafiaChannel.overwrites_for(member)
-                        """await mafiaChannel.edit(overwrites={
-                            member: discord.PermissionOverwrite(
-                                view_channel=True, read_messages=True, send_messages=True)
-                        })"""
                         perms.read_messages = True
                         perms.send_messages = True
                         perms.view_channel = True
                         await mafiaChannel.set_permissions(member, overwrite=perms)
-                        print(
-                            f'{self.bot.get_user(player[0]).name} has been given mafia perms')
+                        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                     action=f'FixPermissions in G-{self.ctx.guild.id}: {self.bot.get_user(player[0]).name} has been given mafia perms')
                     else:
                         perms = mafiaChannel.overwrites_for(member)
-                        """await mafiaChannel.edit(overwrites={
-                            member: discord.PermissionOverwrite(
-                                view_channel=True, read_messages=True, send_messages=True)
-                        })"""
                         perms.read_messages = False
                         perms.send_messages = False
                         perms.view_channel = False
                         await mafiaChannel.set_permissions(member, overwrite=perms)
-                        print(
-                            f'{self.bot.get_user(player[0]).name} has lost mafia perms')
-                    print(
-                        f'{self.bot.get_user(player[0]).name} has been given alive perms')
+                        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                     action=f'FixPermissions in G-{self.ctx.guild.id}: {self.bot.get_user(player[0]).name} has lost mafia perms')
+                    settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'FixPermissions in G-{self.ctx.guild.id}: {self.bot.get_user(player[0]).name} has been given alive perms')
                 else:  # if dead
                     member = await self.ctx.guild.fetch_member(player[0])
                     await member.add_roles(deadRole)
                     perms = mafiaChannel.overwrites_for(member)
-                    """await mafiaChannel.edit(overwrites={
-                        member: discord.PermissionOverwrite(
-                            view_channel=True, read_messages=True, send_messages=True)
-                    })"""
                     perms.read_messages = False
                     perms.send_messages = False
                     perms.view_channel = False
                     await mafiaChannel.set_permissions(member, overwrite=perms)
-                    print(
-                        f'{self.bot.get_user(player[0]).name} has been given dead perms')
+                    settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'FixPermissions in G-{self.ctx.guild.id}: {self.bot.get_user(player[0]).name} has been given dead perms')
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                     action=f'Permissions fixed in G-{self.ctx.guild.id}, enableAll={enableAll}')
 
     async def initGame(self):
         self.gameInitialized = True
@@ -172,6 +171,8 @@ class MafiaGame:
                 # await self.ctx.send(f'<@{lst[0]}> is {k}')
                 pass
         await self.fixPermissions(enableAll=True)
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                     action=f'Game initialized in G-{self.ctx.guild.id}')
 
     # these methods return the ID of the player that was chosen
     async def messageMafia(self, ID, guildDict):
@@ -212,9 +213,10 @@ class MafiaGame:
                     return False
 
         res = await self.bot.wait_for('message', check=lambda m: check(m, ID, self.bot, indexedChoices))
-        print(f'res done in mafia')
         target = indexedChoices[int(res.content.split(' ')[1])]
         await self.bot.get_user(ID).send(f'You have chosen to kill <@{target}>!')
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                     action=f'Mafia {ID} messaged for game in G-{self.ctx.guild.id}, chose to kill {target}')
         return target
 
     async def messageMafias(self, IDList, guildDict):
@@ -260,9 +262,10 @@ class MafiaGame:
                     return False
 
         res = await self.bot.wait_for('message', check=lambda m: check(m, IDList, self.bot, indexedChoices))
-        print(f'res done in multi mafia')
         target = indexedChoices[int(res.content.split(' ')[1])]
         await self.bot.get_channel(guildDict['metadata']['mafiaChannel']).send(f'You have chosen to kill <@{target}>!')
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                     action=f'Mafias [{", ".join(IDList)}] messaged for game in G-{self.ctx.guild.id}, chose to kill {target}')
         return target
 
     async def messageDoctor(self, ID, guildDict):
@@ -310,8 +313,12 @@ class MafiaGame:
             with open(f'games/{self.ctx.guild.id}.json', 'w') as guildFile:
                 guildFile.write(json.dumps(guildDict))
             await self.bot.get_user(ID).send(f'You have chosen to heal yourself!')
+            settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                         action=f'Doctor {ID} messaged for game in G-{self.ctx.guild.id}, chose to heal self')
         else:
             await self.bot.get_user(ID).send(f'You have chosen to heal <@{target}>!')
+            settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                         action=f'Doctor {ID} messaged for game in G-{self.ctx.guild.id}, chose to heal {target}')
         return target
 
     async def messageDetective(self, ID, guildDict):
@@ -353,6 +360,8 @@ class MafiaGame:
         print(f'res done in det')
         target = indexedChoices[int(res.content.split(' ')[1])]
         await self.bot.get_user(ID).send(f'You have chosen to investigate <@{target}>!')
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                     action=f'Detective {ID} messaged for game in G-{self.ctx.guild.id}, chose to investigate {target}')
         return target
 
     async def killPlayer(self, ID, causeOfDeath):
@@ -367,6 +376,8 @@ class MafiaGame:
             guildFile.write(json.dumps(guildDict))
         if ID is None:
             print(f'ID is "{ID}"')
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                     action=f'Player {ID} killed by {causeOfDeath} in G-{self.ctx.guild.id}')
         return random.choice(self.voteMsgs) if causeOfDeath == 'vote' else f'{random.choice(self.deathMsgs).replace("GUILD_NAME", self.ctx.guild.name).replace("PLAYER_NAME", self.bot.get_user(ID).name)}'
 
     async def getRole(self, ID):
@@ -379,6 +390,8 @@ class MafiaGame:
         return None
 
     async def execDay(self, dayDict):
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                     action=f'Starting execDay in G-{self.ctx.guild.id}')
         with open(f'games/{self.ctx.guild.id}.json', 'r') as guildFile:
             guildDict = json.loads(guildFile.read())
         # pprint(guildDict)
@@ -418,22 +431,36 @@ class MafiaGame:
                 return False, False, None, None
             nonlocal submitted, voteDict
             if message.content.lower() == 'skip':
+                settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                             action=f'U-{message.author.id} skipped vote in G-{self.ctx.guild.id}')
                 return False, True, 'Skipped!', None
             if message.author.id not in validIDList:
+                settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                             action=f'U-{message.author.id} unable to vote for game in G-{self.ctx.guild.id}')
                 return False, False, 'You don\'t seem to be able to vote (you might be dead or not in the game).', None
             elif len((args := message.content.split())) != 2:
+                settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                             action=f'UnknownVoteTargetError from U-{message.author.id} in G-{self.ctx.guild.id}')
                 return False, False, 'Who do you want to vote for?', None
             else:
                 if message.author.id in submitted:
                     # FIX THIS LATER LOL
+                    settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'U-{message.author.id} tried to vote twice in G-{self.ctx.guild.id}')
                     return False, False, 'You can only vote once! (The ability to change your vote hasn\'t been added yet)', None
                 if args[0].lower() == 'vote' and repUserID(re.sub('[!@<>]', '', args[1]), self.bot):
                     try:
                         _ = voteDict[int(re.sub('[!@<>]', '', args[1]))]
                         submitted.append(message.author.id)
+                        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                     action=f'Vote received from U-{message.author.id} for {int(re.sub("[!@<>]", "", args[1]))} in G-{self.ctx.guild.id}')
                         return True, False, 'Vote received!', int(re.sub('[!@<>]', '', args[1]))
                     except KeyError:
+                        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                     action=f'InvalidVoteTargetError from U-{message.author.id} in G-{self.ctx.guild.id}')
                         return False, False, 'That player seems to be dead or not in the game! Please try again.', None
+                settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                             action=f'UnknownVoteError from U-{message.author.id} in G-{self.ctx.guild.id}')
                 return False, False, 'Something went wrong. Please try again.', None
 
         embed = discord.Embed(
@@ -448,16 +475,20 @@ class MafiaGame:
                 if voteRecognized:
                     submitted.append(msg.author.id)
                     addVote(retID)
-                    print(
-                        f'vote from {msg.author.name} for {self.bot.get_user(retID).name} recognized')
+                    settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'Vote from U-{msg.author.id} for {self.bot.get_user(retID).name} in G-{self.ctx.guild.id} recognized')
                 elif skipRecognized:
                     submitted.append(msg.author.id)
-                    print(f'skip from {msg.author.name} recognized')
+                    settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'Skip from U-{msg.author.id} in G-{self.ctx.guild.id} recognized')
                 else:
-                    print(f'vote from {msg.author.name} not recognized')
+                    settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'Vote from U-{msg.author.id} in G-{self.ctx.guild.id} not recognized')
                 await msg.reply(reply)
                 if frozenset(livingPlayers) == frozenset(submitted):  # hope this doesnt break
                     await self.ctx.send('All votes are in!')
+                    settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'All votes in in G-{self.ctx.guild.id}')
                     # await self.ctx.send(str(voteDict))
                     break
 
@@ -468,15 +499,23 @@ class MafiaGame:
             await self.fixPermissions()
             voteStr = random.choice(self.voteMsgs).replace(
                 'PLAYER_NAME', f'<@{user.id}>')
+            settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'U-{user.id} was voted out in G-{self.ctx.guild.id}')
         else:
             voteStr = 'No one was voted out.'
+            settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'No one was voted out in G-{self.ctx.guild.id}')
         voteResultEmbed = discord.Embed(
             color=discord.Colour(0x636363),
             timestamp=datetime.utcnow(),
             title='All votes are in!', description=voteStr)
         await self.ctx.send(embed=voteResultEmbed)
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'VoteResultEmbed sent in G-{self.ctx.guild.id}')
 
     async def execNight(self, nightDict):
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'Starting execNight in G-{self.ctx.guild.id}')
         with open(f'games/{self.ctx.guild.id}.json', 'r') as guildFile:
             guildDict = json.loads(guildFile.read())
             guildFile.close()
@@ -485,6 +524,8 @@ class MafiaGame:
         embed = discord.Embed(
             title='Nighttime', description=f'Follow the instructions in your DMs if you have a role.')
         await self.ctx.send(embed=embed)
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'NightEmbed sent in G-{self.ctx.guild.id}')
 
         # dm all people
         # go through all roles, if none are alive for that role, skip
@@ -540,7 +581,8 @@ class MafiaGame:
         # put these into gather
         ret = await asyncio.gather(*messageTaskList)
         # await asyncio.gather(*[self.bot.wait_for('message', check=c) for c in checkList])
-        print('all actions received!')
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'All night actions received in G-{self.ctx.guild.id}')
         # pprint(ret)
         retZip = dict(zip(livingRoleTargetDictKeys, ret))
 
@@ -555,7 +597,8 @@ class MafiaGame:
         if 'mafia' in retZip.keys():
             if retZip['mafia'] != docTarget:
                 kp = retZip['mafia']
-                print(deathMsg := await self.killPlayer(kp, 'mafia'))
+            settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                 action=f'U-{kp} killed by mafia in G-{self.ctx.guild.id}')
 
         try:
             detectiveRes = 'is an innocent' if await self.getRole(retZip['detective']) != 'mafia' else 'is a Mafia'
@@ -569,6 +612,8 @@ class MafiaGame:
                                    timestamp=datetime.utcnow(),
                                    description=kpStr)
         await self.ctx.send(embed=nightEmbed)
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                action=f'Night done ("{kpStr}") in G-{self.ctx.guild.id}')
 
     def gameWinner(self):
         with open(f'games/{self.ctx.guild.id}.json', 'r') as guildFile:
@@ -614,6 +659,8 @@ class MafiaGame:
         elif winnerStr == 'villager':
             embed.title = 'Villagers win!'
         await self.ctx.send(embed=embed)
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                action=f'{winnerStr} win in G-{self.ctx.guild.id}')
         await self.fixPermissions(enableAll=True)
 
     async def run(self):
@@ -629,10 +676,10 @@ class MafiaGame:
                 if (gw := self.gameWinner()) != 'none':
                     await self.endGame(gw)
                     return
-                print('day done')
             elif dct['name'].startswith('Night'):
                 await self.execNight(dct)
                 if (gw := self.gameWinner()) != 'none':
                     await self.endGame(gw)
                     return
-                print('night done')
+        settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
+                                action=f'Game over in G-{self.ctx.guild.id}')

@@ -7,14 +7,7 @@ from pprint import pprint
 from discord.ext import commands
 from game import Game
 from settings import defaultMetadata, defaultRules, defaultRoles, helpInfo
-import settings
-logger = logging.getLogger('discord')
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(
-    filename='discord.log', encoding='utf-8', mode='w')
-handler.setFormatter(logging.Formatter(
-    '%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
-logger.addHandler(handler)
+import settings as settingsFile
 
 with open('settings.json') as s:
     settings = json.loads(s.read())
@@ -43,13 +36,6 @@ class HelpCommand(commands.MinimalHelpCommand):
 
         channel = self.get_destination()
         await channel.send(embed=helpEmbed)
-
-    """async def send_pages(self):
-        destination = self.get_destination()
-        for page in self.paginator.pages:
-            helpEmbed = discord.Embed(
-                description=page, color=discord.Colour(settings['embedColor']))
-            await destination.send(embed=helpEmbed)"""
 
 
 intents = discord.Intents.default()
@@ -95,7 +81,7 @@ class Main(commands.Cog):
             color=discord.Colour(0x636363),
             timestamp=datetime.datetime.now())
         reportEmbed.set_footer(text=ctx.guild.name)
-        await bot.get_channel(802599375674408991).send(embed=reportEmbed)
+        await bot.get_channel(settings['reportChannel']).send(embed=reportEmbed)
         await ctx.send('Report sent!')
 
     @commands.command(hidden=True, command_attrs={
@@ -137,11 +123,13 @@ async def on_ready():
         e.write(json.dumps({emoji.name: emoji.id for emoji in bot.emojis}))"""
     for guild in bot.guilds:
         await fixGuildFile(guild=guild)
-    print('Logged on as {0.user}'.format(bot))
+    print(f'Logged on as {bot.user} at {startTime}')
+    settingsFile.log('None', 'None', 'admin', action=f'Logged on as {bot.user} at {startTime}')
 
 
 @bot.event
 async def on_guild_join(guild):
+    settingsFile.log(guild.id, 'None', 'admin', action=f'GuildJoin: G-{guild.id}')
     with open(f'games/{guild.id}.json', 'w') as guildFile:
         gameDict = {
             'guildName': guild.name,
@@ -164,6 +152,7 @@ async def on_guild_join(guild):
             if channel.topic.startswith(settings['templateRecogKey']):
                 templateRecognized = True
     if templateRecognized:
+        settingsFile.log(guild.id, 'None', 'admin', action=f'Template recognized in G-{guild.id}')
         gen = None
         nameFormatter = {
             'village': 'villageChannel',
@@ -192,6 +181,7 @@ async def on_guild_join(guild):
                                            color=discord.Colour(0x636363),
                                            timestamp=datetime.datetime.utcnow(),
                                            description='To see the current game settings, use `-viewsetup`.'))
+    settingsFile.log(guild.id, 'None', 'admin', action=f'G-{guild.id} file formatted')
 
 
 async def fixGuildFile(guild):
@@ -230,6 +220,7 @@ async def fixGuildFile(guild):
         guildDict['guildName'] = guild.name
         guildFile.write(json.dumps(guildDict))
         guildFile.close()
+    settingsFile.log(guild.id, 'None', 'admin', action=f'Fixed guild file for G-{guild.id}')
 
 
 @bot.event
@@ -243,5 +234,6 @@ async def on_message(message):
         await bot.process_commands(message)
     except:
         await message.channel.reply('An error occurred. Please try again.')
+    settingsFile.log(message.guild.id, message.channel.id, message.author.id, action=f'Unknown message error: msg="{message.content}" from {message.author.id}')
 
 bot.run(settings['botToken'])

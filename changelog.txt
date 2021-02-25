@@ -1,3 +1,7 @@
+2/25
+    - custom logging added
+2/23
+    - concurrent games work
 2/21
     - kill command added
     - clear now works while a game is active and kills the game
