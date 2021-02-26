@@ -42,18 +42,16 @@ class Game(commands.Cog):
             settings.log(guildID, "???", "???", action=f'U-{playerID} removed from game in G-{guildID} by unknown user')
 
     def updateGame(self, guildID, userID):
-        outcome = ''
         gameString = ''
         try:
             with open(f'games/{guildID}.json', 'r') as guildFile:
                 guildDict = json.loads(gameString := guildFile.read())
             if userID in guildDict['players']:
-                return 'You\'re already in the game!'
+                return 'You\'re already in the game!', False
         except:
             pass
         with open(f'games/{guildID}.json', 'w') as guildFile:
             if len(gameString) == 0:
-                outcome = 'Game created!'
                 settings.log(guildID, "???", userID, action=f'Game created in G-{guildID}')
                 gameDict = {
                     'guildID': guildID,
@@ -64,7 +62,7 @@ class Game(commands.Cog):
                 }
                 guildFile.write(json.dumps(gameDict))
                 guildFile.close()
-                return outcome
+                return 'Game created!', True
             else:
                 outcome = 'Joined game!'
                 settings.log(guildID, "???", userID, action=f'U-{userID} joined game in G-{guildID}')
@@ -76,7 +74,7 @@ class Game(commands.Cog):
                 gameDict['rules'] = settings.largeRules
             guildFile.write(json.dumps(gameDict))
         guildFile.close()
-        return outcome
+        return 'Joined game!', True
 
     async def initGuildFile(self, guildID):
         with open(f'games/{guildID}.json', 'w') as guildFile:
@@ -184,7 +182,13 @@ class Game(commands.Cog):
         'aliases': ['joingame']
     })
     async def join(self, ctx):
-        await ctx.send(self.updateGame(ctx.guild.id, ctx.author.id))
+        with open(f'data/emojimap.json', 'r') as emojiMap:
+            emojiDict = json.loads(emojiMap.read())
+        reply, goodAction = self.updateGame(ctx.guild.id, ctx.author.id)
+        reaction = 'white_check_mark' if goodAction else 'no_entry_sign'
+        if not goodAction:
+            await ctx.reply(reply)
+        await ctx.message.add_reaction(emojiDict[reaction])
         settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'U-{ctx.author.id} joined game in G-{ctx.guild.id}')
 
     @commands.command(command_attrs={
@@ -192,7 +196,10 @@ class Game(commands.Cog):
         'aliases': ['leavegame']
     })
     async def leave(self, ctx):
+        with open(f'data/emojimap.json', 'r') as emojiMap:
+            emojiDict = json.loads(emojiMap.read())
         self.removePlayerFromGame(ctx.guild.id, ctx.message.author.id)
+        await ctx.message.add_reaction(emojiDict['white_check_mark'])
         settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'U-{ctx.author.id} left game in G-{ctx.guild.id}')
 
     @commands.command(command_attrs={
@@ -205,7 +212,7 @@ class Game(commands.Cog):
             await ctx.send('Game over!')
         with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
             guildDict = json.loads(guildFile.read())
-        with open(f'data/emoji_map.json', 'r') as emojiMap:
+        with open(f'data/emojimap.json', 'r') as emojiMap:
             emojiDict = json.loads(emojiMap.read())
         if len(guildDict['players']) == 0:
             await ctx.message.add_reaction(emojiDict['no_entry_sign'])
@@ -228,7 +235,7 @@ class Game(commands.Cog):
     async def kill(self, ctx):
         with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
             guildDict = json.loads(guildFile.read())
-        with open(f'data/emoji_map.json', 'r') as emojiMap:
+        with open(f'data/emojimap.json', 'r') as emojiMap:
             emojiDict = json.loads(emojiMap.read())
         if len(guildDict['players']) == 0:
             await ctx.message.add_reaction(emojiDict['no_entry_sign'])

@@ -428,49 +428,52 @@ class MafiaGame:
 
         def check(message, validIDList):
             if not self.messageRelatesToCurrGame(message):
-                return False, False, None, None
+                return False, False, None, None, None
             nonlocal submitted, voteDict
             if message.content.lower() == 'skip':
                 settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                              action=f'U-{message.author.id} skipped vote in G-{self.ctx.guild.id}')
-                return False, True, 'Skipped!', None
+                return False, True, 'Skipped!', None, True
             if message.author.id not in validIDList:
                 settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                              action=f'U-{message.author.id} unable to vote for game in G-{self.ctx.guild.id}')
-                return False, False, 'You don\'t seem to be able to vote (you might be dead or not in the game).', None
+                return False, False, 'You don\'t seem to be able to vote (you might be dead or not in the game).', None, False
             elif len((args := message.content.split())) != 2:
                 settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                              action=f'UnknownVoteTargetError from U-{message.author.id} in G-{self.ctx.guild.id}')
-                return False, False, 'Who do you want to vote for?', None
+                return False, False, 'Who do you want to vote for?', None, False
             else:
                 if message.author.id in submitted:
                     # FIX THIS LATER LOL
                     settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                                  action=f'U-{message.author.id} tried to vote twice in G-{self.ctx.guild.id}')
-                    return False, False, 'You can only vote once! (The ability to change your vote hasn\'t been added yet)', None
+                    return False, False, 'You can only vote once! (The ability to change your vote hasn\'t been added yet)', None, False
                 if args[0].lower() == 'vote' and repUserID(re.sub('[!@<>]', '', args[1]), self.bot):
                     try:
                         _ = voteDict[int(re.sub('[!@<>]', '', args[1]))]
                         submitted.append(message.author.id)
                         settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                                      action=f'Vote received from U-{message.author.id} for {int(re.sub("[!@<>]", "", args[1]))} in G-{self.ctx.guild.id}')
-                        return True, False, 'Vote received!', int(re.sub('[!@<>]', '', args[1]))
+                        return True, False, 'Vote received!', int(re.sub('[!@<>]', '', args[1])), True
                     except KeyError:
                         settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                                      action=f'InvalidVoteTargetError from U-{message.author.id} in G-{self.ctx.guild.id}')
-                        return False, False, 'That player seems to be dead or not in the game! Please try again.', None
+                        return False, False, 'That player seems to be dead or not in the game! Please try again.', None, False
                 settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                              action=f'UnknownVoteError from U-{message.author.id} in G-{self.ctx.guild.id}')
-                return False, False, 'Something went wrong. Please try again.', None
+                return False, False, 'Something went wrong. Please try again.', None, False
 
         embed = discord.Embed(
             title='Voting Time!', description=f'Type `vote [user]` to vote for who you think is the Mafia, or `skip` to skip.')
         await self.ctx.send(embed=embed)
 
+        with open(f'data/emojimap.json', 'r') as emojiMap:
+            emojiDict = json.loads(emojiMap.read())
         while True:
             msg = await self.bot.wait_for('message', check=lambda m: True)
-            voteRecognized, skipRecognized, reply, retID = check(
+            voteRecognized, skipRecognized, reply, retID, goodAction = check(
                 msg, livingPlayers)
+            reaction = 'white_check_mark' if goodAction else 'no_entry_sign'
             if reply is not None:  # if messageRelatesToCurrGame
                 if voteRecognized:
                     submitted.append(msg.author.id)
@@ -484,7 +487,9 @@ class MafiaGame:
                 else:
                     settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,
                                  action=f'Vote from U-{msg.author.id} in G-{self.ctx.guild.id} not recognized')
-                await msg.reply(reply)
+                await msg.add_reaction(emojiDict[reaction])
+                if reply not in ('Skipped!', 'Vote received!'):
+                    await msg.reply(reply)
                 if frozenset(livingPlayers) == frozenset(submitted):  # hope this doesnt break
                     await self.ctx.send('All votes are in!')
                     settings.log(self.ctx.guild.id, self.ctx.channel.id, self.ctx.author.id,

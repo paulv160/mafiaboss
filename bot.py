@@ -119,8 +119,6 @@ async def on_ready():
         datetime.datetime.utcnow(), '%Y-%m-%d %H:%M:%S.%f')
     with open('uptime.txt', 'w') as u:
         u.write(str(startTime))
-    """with open('data/emoji.json', 'w') as e:
-        e.write(json.dumps({emoji.name: emoji.id for emoji in bot.emojis}))"""
     for guild in bot.guilds:
         await fixGuildFile(guild=guild)
     print(f'Logged on as {bot.user} at {startTime}')
