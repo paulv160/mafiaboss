@@ -1,5 +1,6 @@
 2/25
     - custom logging added
+    - some replies changed to reactions
 2/23
     - concurrent games work
 2/21
@@ -13,7 +14,7 @@
 2/14
     - game works
 2/13
-    - roles added and permissions work (maybe)
+    - roles added and permissions work
 2/7
     - night works
 1/30

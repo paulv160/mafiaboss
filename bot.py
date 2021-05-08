@@ -120,7 +120,10 @@ async def on_ready():
     with open('uptime.txt', 'w') as u:
         u.write(str(startTime))
     for guild in bot.guilds:
-        await fixGuildFile(guild=guild)
+        try:
+            await fixGuildFile(guild=guild)
+        except FileNotFoundError:
+            continue
     print(f'Logged on as {bot.user} at {startTime}')
     settingsFile.log('None', 'None', 'admin', action=f'Logged on as {bot.user} at {startTime}')
 
@@ -232,6 +235,6 @@ async def on_message(message):
         await bot.process_commands(message)
     except:
         await message.channel.reply('An error occurred. Please try again.')
-    settingsFile.log(message.guild.id, message.channel.id, message.author.id, action=f'Unknown message error: msg="{message.content}" from {message.author.id}')
+        #settingsFile.log(message.guild.id, message.channel.id, message.author.id, action=f'Unknown message error: msg="{message.content}" from {message.author.id}')
 
 bot.run(settings['botToken'])

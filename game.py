@@ -4,7 +4,7 @@ from datetime import datetime
 import time
 import json
 from pprint import pprint
-# from utils import csvToList, listToCSV
+from utils import *
 import settings
 from mafiagame import MafiaGame
 
@@ -39,7 +39,8 @@ class Game(commands.Cog):
                 guildDict['players'].remove(playerID)
             guildFile.write(json.dumps(guildDict))
             guildFile.close()
-            settings.log(guildID, "???", "???", action=f'U-{playerID} removed from game in G-{guildID} by unknown user')
+            settings.log(guildID, "???", "???",
+                         action=f'U-{playerID} removed from game in G-{guildID} by unknown user')
 
     def updateGame(self, guildID, userID):
         gameString = ''
@@ -52,7 +53,8 @@ class Game(commands.Cog):
             pass
         with open(f'games/{guildID}.json', 'w') as guildFile:
             if len(gameString) == 0:
-                settings.log(guildID, "???", userID, action=f'Game created in G-{guildID}')
+                settings.log(guildID, "???", userID,
+                             action=f'Game created in G-{guildID}')
                 gameDict = {
                     'guildID': guildID,
                     'metadata': settings.defaultMetadata,
@@ -65,7 +67,8 @@ class Game(commands.Cog):
                 return 'Game created!', True
             else:
                 outcome = 'Joined game!'
-                settings.log(guildID, "???", userID, action=f'U-{userID} joined game in G-{guildID}')
+                settings.log(guildID, "???", userID,
+                             action=f'U-{userID} joined game in G-{guildID}')
                 gameDict = json.loads(gameString)
                 if userID not in gameDict['players']:
                     gameDict['players'].append(userID)
@@ -86,7 +89,8 @@ class Game(commands.Cog):
                 'roles': settings.defaultRoles
             }
             guildFile.write(json.dumps(guildDict))
-            settings.log(guildID, "???", "???", action=f'GuildFile initialized for G-{guildID}')
+            settings.log(guildID, "???", "???",
+                         action=f'GuildFile initialized for G-{guildID}')
 
     async def hasAdminPerms(self, user):
         return user.guild_permissions.administrator
@@ -97,7 +101,8 @@ class Game(commands.Cog):
     async def setup(self, ctx, villageChannel: TextChannel, graveyardChannel: TextChannel, mafiaChannel: TextChannel, aliveRole: Role, deadRole: Role):
         if not await self.hasAdminPerms(ctx.message.author):
             await ctx.reply('You need to be an administrator to use this command!')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'AdminError in setup command for {ctx.guild.id}')
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'AdminError in setup command for {ctx.guild.id}')
             return
         else:
             invalidArgNames = []
@@ -111,7 +116,8 @@ class Game(commands.Cog):
                 if type(deadRole) != Role:
                     invalidArgNames.append('deadRole')
                 await ctx.reply(f'These arguments were invalid: {", ".join(invalidArgNames)}. Please try again.')
-                settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'InvalidArgsError in setup command for G-{ctx.guild.id}')
+                settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                             action=f'InvalidArgsError in setup command for G-{ctx.guild.id}')
                 return
             else:
                 with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
@@ -133,7 +139,8 @@ class Game(commands.Cog):
                     guildFile.write(json.dumps(guildDict))
                     guildFile.close()
         await ctx.send('Setup complete! Use -viewsetup to verify that it worked.')
-        settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'Successful setup for G-{ctx.guild.id}')
+        settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                     action=f'Successful setup for G-{ctx.guild.id}')
 
     @commands.command(command_attrs={
         'name': 'viewsetup',
@@ -163,6 +170,21 @@ class Game(commands.Cog):
         await ctx.send(embed=setupViewEmbed)
 
     @commands.command(command_attrs={
+        'name': 'viewrules',
+    })
+    async def viewrules(self, ctx):
+        with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
+            guildDict = json.loads(guildFile.read())
+        m, doc, det = guildDict['rules']['mafia'], guildDict['rules']['doctor'], guildDict['rules']['detective']
+        rulesEmbed = Embed(title='Current Game Rules', description=f"""
+        **Mafia Count** - {m}
+        **Doctor Count** (currently limited to 1) - {doc}
+        **Detective Count** (currently limited to 1) - {det}
+        **Villager Count** - {len(guildDict['players']) - (m+doc+det)}
+        """)
+        await ctx.send(embed=rulesEmbed)
+
+    @commands.command(command_attrs={
         'name': 'rules'
     })
     async def rules(self, ctx):
@@ -189,7 +211,8 @@ class Game(commands.Cog):
         if not goodAction:
             await ctx.reply(reply)
         await ctx.message.add_reaction(emojiDict[reaction])
-        settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'U-{ctx.author.id} joined game in G-{ctx.guild.id}')
+        settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                     action=f'U-{ctx.author.id} joined game in G-{ctx.guild.id}')
 
     @commands.command(command_attrs={
         'name': 'leave',
@@ -200,7 +223,8 @@ class Game(commands.Cog):
             emojiDict = json.loads(emojiMap.read())
         self.removePlayerFromGame(ctx.guild.id, ctx.message.author.id)
         await ctx.message.add_reaction(emojiDict['white_check_mark'])
-        settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'U-{ctx.author.id} left game in G-{ctx.guild.id}')
+        settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                     action=f'U-{ctx.author.id} left game in G-{ctx.guild.id}')
 
     @commands.command(command_attrs={
         'name': 'clear',
@@ -221,13 +245,15 @@ class Game(commands.Cog):
             # print(type(emojiDict))
             await ctx.message.add_reaction(emojiDict['no_entry_sign'])
             await ctx.reply('You need to be the owner of the game or a server admin to use this command!')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'AdminError for clear command in G-{ctx.guild.id}')
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'AdminError for clear command in G-{ctx.guild.id}')
         else:
             guildDict['players'] = []
             with open(f'games/{ctx.guild.id}.json', 'w') as guildFile:
                 guildFile.write(json.dumps(guildDict))
             await ctx.message.add_reaction(emojiDict['white_check_mark'])
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'Game cleared by U-{ctx.author.id} in G-{ctx.guild.id}')
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'Game cleared by U-{ctx.author.id} in G-{ctx.guild.id}')
 
     @commands.command(command_attrs={
         'name': 'kill',
@@ -240,12 +266,14 @@ class Game(commands.Cog):
         if len(guildDict['players']) == 0:
             await ctx.message.add_reaction(emojiDict['no_entry_sign'])
             await ctx.reply('The lobby is empty!')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'EmptyLobbyError in kill command for G-{ctx.guild.id} from U-{ctx.author.id}') 
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'EmptyLobbyError in kill command for G-{ctx.guild.id} from U-{ctx.author.id}')
             return
         if Permissions(administrator=True) not in ctx.author.guild_permissions and ctx.author.id != guildDict['players'][0]:
             await ctx.message.add_reaction(emojiDict['no_entry_sign'])
             await ctx.reply('You need to be the owner of the game or a server admin to use this command!')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'AdminError in kill command for G-{ctx.guild.id} from U-{ctx.author.id}') 
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'AdminError in kill command for G-{ctx.guild.id} from U-{ctx.author.id}')
             return
         # print(self.mafiaGame)
         if self.mafiaGame is not None:
@@ -253,11 +281,13 @@ class Game(commands.Cog):
             self.mafiaGame = None
             await ctx.message.add_reaction(emojiDict['white_check_mark'])
             await ctx.send('Game over!')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'Game successfully killed for G-{ctx.guild.id} by U-{ctx.author.id}')
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'Game successfully killed for G-{ctx.guild.id} by U-{ctx.author.id}')
         else:
             await ctx.message.add_reaction(emojiDict['no_entry_sign'])
             await ctx.send('No game is currently active. Did you want to **clear** the lobby?')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'NoGameError in kill command for G-{ctx.guild.id} from U-{ctx.author.id}')
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'NoGameError in kill command for G-{ctx.guild.id} from U-{ctx.author.id}')
 
     @commands.command(command_attrs={
         'name': 'game',
@@ -287,27 +317,56 @@ class Game(commands.Cog):
         await ctx.send(embed=gameViewEmbed)
 
     @commands.command(command_attrs={
+        'name': 'setrules'
+    })
+    async def setrules(self, ctx, mafiaCount, docCount, detectiveCount):
+        with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
+            guildDict = json.loads(guildFile.read())
+        if ctx.author.id != guildDict['players'][0]:
+            await ctx.reply('You are not the game owner!')
+            return
+        if not all((repInt(mafiaCount), repInt(docCount), repInt(detectiveCount))):
+            await ctx.reply('Invalid arguments!')
+            return
+        with open(f'data/emojimap.json', 'r') as emojiMap:
+            emojiDict = json.loads(emojiMap.read())
+        if validGameRulesCheck(int(mafiaCount), int(docCount), int(detectiveCount), len(guildDict['players'])):
+            guildDict['rules'].update({
+                "mafia": int(mafiaCount),
+                "doctor": int(docCount),
+                "detective": int(detectiveCount)
+            })
+            with open(f'games/{ctx.guild.id}.json', 'w') as guildFile:
+                guildFile.write(json.dumps(guildDict))
+            await ctx.message.add_reaction(emojiDict['white_check_mark'])
+        else:
+            await ctx.reply('Not a valid ruleset!')
+            await ctx.message.add_reaction(emojiDict['no_entry_sign'])
+
+    @commands.command(command_attrs={
         'name': 'start',
         'aliases': ['startgame']
     })
     async def start(self, ctx):
         with open(f'games/{ctx.guild.id}.json', 'r') as guildFile:
             guildDict = json.loads(guildFile.read())
-            guildFile.close()
         # if any of the metadata values have not been init'd
         if None in guildDict['metadata'].values():
             await ctx.send('Make sure to set up all channels and roles before starting a game!')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'NoSetupError in start command for G-{ctx.guild.id} from U-{ctx.author.id}')
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'NoSetupError in start command for G-{ctx.guild.id} from U-{ctx.author.id}')
             return
         elif len(guildDict['players']) < settings.minPlayers:
             await ctx.reply(f'You must have at least {settings.minPlayers} players before starting a game! You currently have {len(guildDict["players"])}.')
-            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'TooFewPlayersError in start command for G-{ctx.guild.id} from U-{ctx.author.id}')
+            settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                         action=f'TooFewPlayersError in start command for G-{ctx.guild.id} from U-{ctx.author.id}')
         else:
             await ctx.send('Starting game!')
             self.mafiaGame = MafiaGame(self.bot, ctx)
             await self.mafiaGame.removeRolesFromNonPlayers()
             try:
-                settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id, action=f'U-{ctx.author.id} started a game in G-{ctx.guild.id}')
+                settings.log(ctx.guild.id, ctx.channel.id, ctx.author.id,
+                             action=f'U-{ctx.author.id} started a game in G-{ctx.guild.id}')
                 await self.mafiaGame.run()
             except Exception as e:
                 await ctx.reply(

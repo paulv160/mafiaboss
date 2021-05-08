@@ -471,8 +471,7 @@ class MafiaGame:
             emojiDict = json.loads(emojiMap.read())
         while True:
             msg = await self.bot.wait_for('message', check=lambda m: True)
-            voteRecognized, skipRecognized, reply, retID, goodAction = check(
-                msg, livingPlayers)
+            voteRecognized, skipRecognized, reply, retID, goodAction = check(msg, livingPlayers)
             reaction = 'white_check_mark' if goodAction else 'no_entry_sign'
             if reply is not None:  # if messageRelatesToCurrGame
                 if voteRecognized:

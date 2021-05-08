@@ -15,7 +15,7 @@ defaultRules = {  # groups of 5-7
 }
 
 largeRules = {  # groups of 8 and up
-    'mafia': 1,
+    'mafia': 2,
     'doctor': 1,
     'detective': 1,
     'villager': 0
