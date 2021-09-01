@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import discord
-import logging
 import json
 import datetime
 from pprint import pprint
@@ -125,12 +124,10 @@ async def on_ready():
         except FileNotFoundError:
             continue
     print(f'Logged on as {bot.user} at {startTime}')
-    settingsFile.log('None', 'None', 'admin', action=f'Logged on as {bot.user} at {startTime}')
 
 
 @bot.event
 async def on_guild_join(guild):
-    settingsFile.log(guild.id, 'None', 'admin', action=f'GuildJoin: G-{guild.id}')
     with open(f'games/{guild.id}.json', 'w') as guildFile:
         gameDict = {
             'guildName': guild.name,
@@ -153,7 +150,6 @@ async def on_guild_join(guild):
             if channel.topic.startswith(settings['templateRecogKey']):
                 templateRecognized = True
     if templateRecognized:
-        settingsFile.log(guild.id, 'None', 'admin', action=f'Template recognized in G-{guild.id}')
         gen = None
         nameFormatter = {
             'village': 'villageChannel',
@@ -182,7 +178,6 @@ async def on_guild_join(guild):
                                            color=discord.Colour(0x636363),
                                            timestamp=datetime.datetime.utcnow(),
                                            description='To see the current game settings, use `-viewsetup`.'))
-    settingsFile.log(guild.id, 'None', 'admin', action=f'G-{guild.id} file formatted')
 
 
 async def fixGuildFile(guild):
@@ -221,7 +216,6 @@ async def fixGuildFile(guild):
         guildDict['guildName'] = guild.name
         guildFile.write(json.dumps(guildDict))
         guildFile.close()
-    settingsFile.log(guild.id, 'None', 'admin', action=f'Fixed guild file for G-{guild.id}')
 
 
 @bot.event
@@ -235,6 +229,5 @@ async def on_message(message):
         await bot.process_commands(message)
     except:
         await message.channel.reply('An error occurred. Please try again.')
-        #settingsFile.log(message.guild.id, message.channel.id, message.author.id, action=f'Unknown message error: msg="{message.content}" from {message.author.id}')
-
+        
 bot.run(settings['botToken'])
